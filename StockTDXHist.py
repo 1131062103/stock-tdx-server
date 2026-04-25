@@ -359,8 +359,22 @@ def main():
             
             df = tdx.get_quotes(stocks)
             if df is not None:
+                # 临时设置pandas显示选项，确保所有列完整显示
+                old_max_cols = pd.get_option('display.max_columns')
+                old_width = pd.get_option('display.width')
+                old_max_colwidth = pd.get_option('display.max_colwidth')
+                
+                pd.set_option('display.max_columns', None)
+                pd.set_option('display.width', None)
+                pd.set_option('display.max_colwidth', None)
+                
                 print("实时行情:")
                 print(df)
+                
+                # 恢复原始设置
+                pd.set_option('display.max_columns', old_max_cols)
+                pd.set_option('display.width', old_width)
+                pd.set_option('display.max_colwidth', old_max_colwidth)
 
         elif args.command == 'list':
             df = tdx.get_stock_list(args.market, args.start)

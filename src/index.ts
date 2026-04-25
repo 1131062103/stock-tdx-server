@@ -26,11 +26,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, "..");
 const scriptPath = path.join(projectRoot, "StockTDXHist.py");
-const termuxPython = path.join(projectRoot, ".venv", "bin", "python");
+const pythonPath = path.join(projectRoot, ".venv", "bin", "python");
 
 const RUNTIME = {
-  wrapper: process.env.STOCK_TDX_PY_WRAPPER || "glibc-runner",
-  python: process.env.STOCK_TDX_PYTHON || termuxPython,
+  python: process.env.STOCK_TDX_PYTHON || pythonPath,
   script: process.env.STOCK_TDX_SCRIPT || scriptPath,
   env: {
     ...process.env,
@@ -103,8 +102,7 @@ function requireArgs(args: Record<string, unknown>, fields: string[]) {
 
 async function executePythonScript(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const cmdArgs = [RUNTIME.python, RUNTIME.script, ...args];
-    const child = spawn(RUNTIME.wrapper, cmdArgs, { env: RUNTIME.env });
+    const child = spawn(RUNTIME.python, [RUNTIME.script, ...args], { env: RUNTIME.env });
 
     let stdout = "";
     let stderr = "";
