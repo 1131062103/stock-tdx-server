@@ -9,6 +9,7 @@ Termux / Linux 可用的通达信（TDX）A 股行情 MCP 服务。通过 Node.j
 - 股票列表
 - 实时/历史分时
 - 分笔成交、财务信息、除权除息、公司信息目录
+- AKShare 东方财富龙虎榜详情
 
 ## 安装
 
@@ -44,7 +45,9 @@ npm run build
 
 - `STOCK_TDX_PYTHON`：Python 解释器路径，默认 `项目根/.venv/bin/python`
 - `STOCK_TDX_SCRIPT`：Python 脚本路径，默认 `项目根/StockTDXHist.py`
-- `STOCK_TDX_TIMEOUT_MS`：单次工具调用超时，默认 `30000`
+- `STOCK_TDX_TIMEOUT_MS`：通达信工具调用超时，默认 `30000`
+- `STOCK_LHB_SCRIPT`：龙虎榜脚本路径，默认 `项目根/StockAKShareLHB.py`
+- `STOCK_LHB_TIMEOUT_MS`：龙虎榜工具调用超时，默认 `60000`
 
 ## 可用工具
 
@@ -60,6 +63,7 @@ npm run build
 | `get_finance_info` | 财务信息 | `market`, `code` |
 | `get_xdxr_info` | 除权除息 | `market`, `code` |
 | `get_company_info_category` | 公司信息目录 | `market`, `code` |
+| `get_lhb_detail` | 东方财富龙虎榜详情 | `start_date`, `end_date`, `limit` |
 
 参数说明：`market=0` 深圳，`market=1` 上海；`ktype=day/week/month/quarter/year/1min/5min/15min/30min/60min`。
 
@@ -69,11 +73,12 @@ npm run build
 . .venv/bin/activate
 python StockTDXHist.py kline --code 600519 --market 1 --ktype day --count 5
 python StockTDXHist.py quote --stocks 0,000001 1,600519
+python StockAKShareLHB.py detail --start-date 20240417 --end-date 20240430 --limit 5
 ```
 
 ## 注意
 
-- 数据来自通达信公开行情接口，稳定性取决于服务器连通性。
+- 通达信数据来自公开行情接口，龙虎榜数据来自 AKShare/东方财富接口，稳定性取决于上游连通性。
 - 沪市常见代码：600/601/603/605/688；深市常见代码：000/001/002/003/004/300。新三板、北交所多数不支持。
 
 ## License

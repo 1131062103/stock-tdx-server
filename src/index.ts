@@ -20,6 +20,9 @@ interface StockToolArgs {
   stocks?: string[];
   start?: number;
   date?: number;
+  start_date?: string;
+  end_date?: string;
+  limit?: number;
 }
 
 type ToolDef = readonly [
@@ -33,7 +36,9 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runtime = {
   python: process.env.STOCK_TDX_PYTHON || path.join(root, ".venv", "bin", "python"),
   script: process.env.STOCK_TDX_SCRIPT || path.join(root, "StockTDXHist.py"),
+  lhbScript: process.env.STOCK_LHB_SCRIPT || path.join(root, "StockAKShareLHB.py"),
   timeoutMs: Number(process.env.STOCK_TDX_TIMEOUT_MS || 30_000),
+  lhbTimeoutMs: Number(process.env.STOCK_LHB_TIMEOUT_MS || 60_000),
   env: { ...process.env, PYTHONIOENCODING: "utf-8" },
 };
 
@@ -56,6 +61,7 @@ const toolDefs: ToolDef[] = [
   ["get_finance_info", "获取财务信息", { market, code: stockCode }, ["market", "code"]],
   ["get_xdxr_info", "获取除权除息信息", { market, code: stockCode }, ["market", "code"]],
   ["get_company_info_category", "获取公司信息目录", { market, code: stockCode }, ["market", "code"]],
+  ["get_lhb_detail", "获取东方财富龙虎榜详情", { start_date: { type: "string", pattern: "^\\d{8}$", description: "开始日期 YYYYMMDD" }, end_date: { type: "string", pattern: "^\\d{8}$", description: "结束日期 YYYYMMDD" }, limit: { type: "integer", minimum: 1, maximum: 1000, default: 50 } }, ["start_date", "end_date"]],
 ];
 
 const tools = toolDefs.map(([name, description, properties, required]) => ({
@@ -85,15 +91,18 @@ function validate(args: StockToolArgs, required: string[]) {
   if (args.stocks && (!Array.isArray(args.stocks) || args.stocks.some((s) => !/^[01],\d{6}$/.test(s)))) {
     throw new Error('stocks 格式必须为 ["0,000001", "1,600519"]');
   }
+  if (args.start_date !== undefined && !/^\d{8}$/.test(args.start_date)) throw new Error("start_date 必须为 YYYYMMDD");
+  if (args.end_date !== undefined && !/^\d{8}$/.test(args.end_date)) throw new Error("end_date 必须为 YYYYMMDD");
+  assertRange("limit", args.limit, 1, 1000);
 }
 
-async function runPython(args: string[]) {
+async function runPython(args: string[], script = runtime.script, timeoutMs = runtime.timeoutMs) {
   return new Promise<string>((resolve, reject) => {
-    const child = spawn(runtime.python, [runtime.script, ...args], { env: runtime.env });
+    const child = spawn(runtime.python, [script, ...args], { env: runtime.env });
     const timer = setTimeout(() => {
       child.kill("SIGTERM");
-      reject(new Error(`执行超时: ${runtime.timeoutMs}ms`));
-    }, runtime.timeoutMs);
+      reject(new Error(`执行超时: ${timeoutMs}ms`));
+    }, timeoutMs);
 
     let stdout = "";
     let stderr = "";
@@ -121,9 +130,10 @@ const handlers: Record<string, (a: StockToolArgs) => Promise<string>> = {
   get_finance_info: ({ market, code }) => runPython(["finance", "--market", String(market), "--code", String(code)]),
   get_xdxr_info: ({ market, code }) => runPython(["xdxr", "--market", String(market), "--code", String(code)]),
   get_company_info_category: ({ market, code }) => runPython(["company_info", "--market", String(market), "--code", String(code)]),
+  get_lhb_detail: ({ start_date, end_date, limit = 50 }) => runPython(["detail", "--start-date", String(start_date), "--end-date", String(end_date), "--limit", String(limit)], runtime.lhbScript, runtime.lhbTimeoutMs),
 };
 
-const server = new Server({ name: "stock-tdx-server", version: "1.1.1" }, { capabilities: { resources: {}, tools: {} } });
+const server = new Server({ name: "stock-tdx-server", version: "1.2.0" }, { capabilities: { resources: {}, tools: {} } });
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
   resources: [{ uri: "stock://markets/info", mimeType: "text/plain", name: "股票市场信息", description: "支持的市场与代码范围" }],
